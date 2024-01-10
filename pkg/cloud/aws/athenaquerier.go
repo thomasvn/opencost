@@ -12,6 +12,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/athena"
 	"github.com/aws/aws-sdk-go-v2/service/athena/types"
 	"github.com/opencost/opencost/pkg/cloud"
+	"github.com/opencost/opencost/pkg/env"
 	"github.com/opencost/opencost/pkg/kubecost"
 	"github.com/opencost/opencost/pkg/log"
 	"github.com/opencost/opencost/pkg/util/stringutil"
@@ -130,7 +131,7 @@ func (aq *AthenaQuerier) queryAthenaPaginated(ctx context.Context, query string,
 	}
 	queryResultsInput := &athena.GetQueryResultsInput{
 		QueryExecutionId: startQueryExecutionOutput.QueryExecutionId,
-		MaxResults:       aws.Int32(1000), // this is the default value
+		MaxResults:       aws.Int32(env.GetAthenaPaginatedQueryMaxResults()),
 	}
 	getQueryResultsPaginator := athena.NewGetQueryResultsPaginator(cli, queryResultsInput)
 	for getQueryResultsPaginator.HasMorePages() {

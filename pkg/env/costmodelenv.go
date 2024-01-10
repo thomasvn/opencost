@@ -13,10 +13,11 @@ import (
 const (
 	APIPortEnvVar = "API_PORT"
 
-	AWSAccessKeyIDEnvVar     = "AWS_ACCESS_KEY_ID"
-	AWSAccessKeySecretEnvVar = "AWS_SECRET_ACCESS_KEY"
-	AWSClusterIDEnvVar       = "AWS_CLUSTER_ID"
-	AWSPricingURL            = "AWS_PRICING_URL"
+	AWSAccessKeyIDEnvVar                 = "AWS_ACCESS_KEY_ID"
+	AWSAccessKeySecretEnvVar             = "AWS_SECRET_ACCESS_KEY"
+	AWSClusterIDEnvVar                   = "AWS_CLUSTER_ID"
+	AWSPricingURL                        = "AWS_PRICING_URL"
+	AthenaPaginatedQueryMaxResultsEnvVar = "ATHENA_PAGINATED_QUERY_MAX_RESULTS"
 
 	AlibabaAccessKeyIDEnvVar     = "ALIBABA_ACCESS_KEY_ID"
 	AlibabaAccessKeySecretEnvVar = "ALIBABA_SECRET_ACCESS_KEY"
@@ -277,6 +278,10 @@ func GetAWSClusterID() string {
 // GetAWSPricingURL returns an optional alternative URL to fetch AWS pricing data from; for use in airgapped environments
 func GetAWSPricingURL() string {
 	return Get(AWSPricingURL, "")
+}
+
+func GetAthenaPaginatedQueryMaxResults() int32 {
+	return GetInt32(AthenaPaginatedQueryMaxResultsEnvVar, 1000)
 }
 
 // GetAlibabaAccessKeyID returns the environment variable value for AlibabaAccessKeyIDEnvVar which represents

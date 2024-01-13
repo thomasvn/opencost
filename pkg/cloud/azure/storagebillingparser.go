@@ -6,12 +6,16 @@ import (
 	"encoding/csv"
 	"fmt"
 	"io"
+	"os"
+	"path/filepath"
+	"runtime"
 	"strings"
 	"time"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob"
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/container"
 	"github.com/opencost/opencost/pkg/cloud"
+	"github.com/opencost/opencost/pkg/env"
 	"github.com/opencost/opencost/pkg/log"
 )
 
@@ -36,7 +40,6 @@ func (asbp *AzureStorageBillingParser) ParseBillingData(start, end time.Time, re
 		asbp.ConnectionStatus = cloud.InvalidConfiguration
 		return err
 	}
-
 	serviceURL := fmt.Sprintf(asbp.StorageConnection.getBlobURLTemplate(), asbp.Account, "")
 	client, err := asbp.Authorizer.GetBlobClient(serviceURL)
 	if err != nil {
@@ -44,35 +47,72 @@ func (asbp *AzureStorageBillingParser) ParseBillingData(start, end time.Time, re
 		return err
 	}
 	ctx := context.Background()
-	blobNames, err := asbp.getMostRecentBlobs(start, end, client, ctx)
-	if err != nil {
-		asbp.ConnectionStatus = cloud.FailedConnection
-		return err
-	}
 
-	if len(blobNames) == 0 && asbp.ConnectionStatus != cloud.SuccessfulConnection {
-		asbp.ConnectionStatus = cloud.MissingData
-		return nil
-	}
+	// ----- HARDCODED BILLING DATA -----
+	// blobNames, err := asbp.getMostRecentBlobs(start, end, client, ctx)
+	// if err != nil {
+	// 	asbp.ConnectionStatus = cloud.FailedConnection
+	// 	return err
+	// }
+	// if len(blobNames) == 0 && asbp.ConnectionStatus != cloud.SuccessfulConnection {
+	// 	asbp.ConnectionStatus = cloud.MissingData
+	// 	return nil
+	// }
+
+	// log.Infof("blobNames: %v", blobNames)  // [export/thomasnExport/20240101-20240131/thomasnExport_758a42af-0731-4edb-b498-1e523bb40f12.csv]
+
+	blobNames := []string{"thomasn-scale-test.csv"}
+	// ----- HARDCODED BILLING DATA -----
 
 	for _, blobName := range blobNames {
-		blobBytes, err2 := asbp.DownloadBlob(blobName, client, ctx)
-		if err2 != nil {
-			asbp.ConnectionStatus = cloud.FailedConnection
-			return err2
-		}
-		err2 = asbp.parseCSV(start, end, csv.NewReader(bytes.NewReader(blobBytes)), resultFn)
-		if err2 != nil {
-			asbp.ConnectionStatus = cloud.ParseError
-			return err2
-		}
+		// ----- INSTRUMENTATION -----
+		var m runtime.MemStats
+		runtime.ReadMemStats(&m)
+		log.Infof("ParseBillingData: HeapAlloc:  %v MB", m.HeapAlloc/1024/1024)
+		// ----- INSTRUMENTATION -----
 
+		if env.IsAzureParseBillingPaginated() {
+			localFilePath := filepath.Join(env.GetConfigPathWithDefault(env.DefaultConfigMountPath), "db", "cloudCost", "azurebilling.csv")
+			err := asbp.DownloadBlobToFile(localFilePath, blobName, client, ctx)
+			if err != nil {
+				asbp.ConnectionStatus = cloud.FailedConnection
+				return err
+			}
+			fp, err := os.Open(localFilePath)
+			if err != nil {
+				asbp.ConnectionStatus = cloud.FailedConnection
+				return err
+			}
+			defer fp.Close()
+			err = asbp.parseCSV(start, end, csv.NewReader(fp), resultFn)
+			if err != nil {
+				asbp.ConnectionStatus = cloud.ParseError
+				return err
+			}
+		} else {
+			blobBytes, err2 := asbp.DownloadBlob(blobName, client, ctx)
+			if err2 != nil {
+				asbp.ConnectionStatus = cloud.FailedConnection
+				return err2
+			}
+			err2 = asbp.parseCSV(start, end, csv.NewReader(bytes.NewReader(blobBytes)), resultFn)
+			if err2 != nil {
+				asbp.ConnectionStatus = cloud.ParseError
+				return err2
+			}
+		}
 	}
 	asbp.ConnectionStatus = cloud.SuccessfulConnection
 	return nil
 }
 
 func (asbp *AzureStorageBillingParser) parseCSV(start, end time.Time, reader *csv.Reader, resultFn AzureBillingResultFunc) error {
+	// ----- INSTRUMENTATION -----
+	var m runtime.MemStats
+	runtime.ReadMemStats(&m)
+	log.Infof("parseCSV: HeapAlloc:  %v MB", m.HeapAlloc/1024/1024)
+	// ----- INSTRUMENTATION -----
+
 	headers, err := reader.Read()
 	if err != nil {
 		return err
@@ -100,6 +140,12 @@ func (asbp *AzureStorageBillingParser) parseCSV(start, end time.Time, reader *cs
 			return err
 		}
 	}
+
+	// ----- INSTRUMENTATION -----
+	runtime.ReadMemStats(&m)
+	log.Infof("parseCSV: HeapAlloc:  %v MB", m.HeapAlloc/1024/1024)
+	// ----- INSTRUMENTATION -----
+
 	return nil
 }
 

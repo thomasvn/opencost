@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob"
@@ -65,4 +67,39 @@ func (sc *StorageConnection) DownloadBlob(blobName string, client *azblob.Client
 	}
 
 	return downloadedData.Bytes(), nil
+}
+
+// DownloadBlobToFile downloads the Azure Billing CSV to a local file
+func (sc *StorageConnection) DownloadBlobToFile(localFilePath string, blobName string, client *azblob.Client, ctx context.Context) error {
+
+	// TODO: Only remove if the file is older than 24 hours? There are multiple goroutines calling this function at once.
+
+	// Remove existing Azure Billing CSV on disk
+	if _, err := os.Stat(localFilePath); err == nil {
+		err := os.Remove(localFilePath)
+		if err != nil {
+			return fmt.Errorf("Azure: DownloadBlobToFile: failed to delete existing file %w", err)
+		}
+	}
+
+	// Create filepath
+	dir := filepath.Dir(localFilePath)
+	if err := os.MkdirAll(dir, os.ModePerm); err != nil {
+		return fmt.Errorf("Azure: DownloadBlobToFile: failed to create directory %w", err)
+	}
+	fp, err := os.Create(localFilePath)
+	if err != nil {
+		return fmt.Errorf("Azure: DownloadBlobToFile: failed to create file %w", err)
+	}
+	defer fp.Close()
+
+	// Download newest Azure Billing CSV to disk
+	log.Infof("Azure: DownloadBlobToFile: retrieving blob: %v", blobName)
+	filesize, err := client.DownloadFile(ctx, sc.Container, blobName, fp, nil)
+	if err != nil {
+		return fmt.Errorf("Azure: DownloadBlobToFile: failed to download %w", err)
+	}
+	log.Infof("Azure: DownloadBlobToFile: retrieved %v of size %d", blobName, filesize)
+
+	return nil
 }

@@ -71,25 +71,36 @@ func (sc *StorageConnection) DownloadBlob(blobName string, client *azblob.Client
 
 // DownloadBlobToFile downloads the Azure Billing CSV to a local file
 func (sc *StorageConnection) DownloadBlobToFile(localFilePath string, blobName string, client *azblob.Client, ctx context.Context) error {
+	// Remove existing Azure Billing CSV on disk, if it's older than 24h
+	// if fileInfo, err := os.Stat(localFilePath); err == nil {
+	// 	modTime := fileInfo.ModTime()
+	// 	// TODO: Ideally, delete this file when we know a new Azure Billing CSV is available for download. Not because the local file is beyond an arbitrary age.
+	// 	if time.Since(modTime) > 24*time.Hour {
+	// 		err := os.Remove(localFilePath)
+	// 		log.Infof("Azure: DownloadBlobToFile: removing existing file %v", localFilePath)
+	// 		if err != nil {
+	// 			return fmt.Errorf("Azure: DownloadBlobToFile: failed to delete existing file %w", err)
+	// 		}
+	// 	} else {
+	// 		log.Infof("Azure: DownloadBlobToFile: file %v exists and is less than 24h old, not deleting", localFilePath)
+	// 		return nil
+	// 	}
+	// }
 
-	// TODO: Only remove if the file is older than 24 hours? There are multiple goroutines calling this function at once.
-
-	// Remove existing Azure Billing CSV on disk
+	// If file exists, don't download it again
 	if _, err := os.Stat(localFilePath); err == nil {
-		err := os.Remove(localFilePath)
-		if err != nil {
-			return fmt.Errorf("Azure: DownloadBlobToFile: failed to delete existing file %w", err)
-		}
+		log.Infof("CloudCost: Azure: DownloadBlobToFile: file %v already exists, not downloading %v", localFilePath, blobName)
+		return nil
 	}
 
 	// Create filepath
 	dir := filepath.Dir(localFilePath)
 	if err := os.MkdirAll(dir, os.ModePerm); err != nil {
-		return fmt.Errorf("Azure: DownloadBlobToFile: failed to create directory %w", err)
+		return fmt.Errorf("CloudCost: Azure: DownloadBlobToFile: failed to create directory %w", err)
 	}
 	fp, err := os.Create(localFilePath)
 	if err != nil {
-		return fmt.Errorf("Azure: DownloadBlobToFile: failed to create file %w", err)
+		return fmt.Errorf("CloudCost: Azure: DownloadBlobToFile: failed to create file %w", err)
 	}
 	defer fp.Close()
 
@@ -97,9 +108,9 @@ func (sc *StorageConnection) DownloadBlobToFile(localFilePath string, blobName s
 	log.Infof("Azure: DownloadBlobToFile: retrieving blob: %v", blobName)
 	filesize, err := client.DownloadFile(ctx, sc.Container, blobName, fp, nil)
 	if err != nil {
-		return fmt.Errorf("Azure: DownloadBlobToFile: failed to download %w", err)
+		return fmt.Errorf("CloudCost: Azure: DownloadBlobToFile: failed to download %w", err)
 	}
-	log.Infof("Azure: DownloadBlobToFile: retrieved %v of size %d", blobName, filesize)
+	log.Infof("CloudCost: Azure: DownloadBlobToFile: retrieved %v of size %dMB", blobName, filesize/1024/1024)
 
 	return nil
 }

@@ -8,7 +8,6 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"time"
 
@@ -47,8 +46,6 @@ func (asbp *AzureStorageBillingParser) ParseBillingData(start, end time.Time, re
 		return err
 	}
 	ctx := context.Background()
-
-	// ----- HARDCODED BILLING DATA -----
 	// blobNames, err := asbp.getMostRecentBlobs(start, end, client, ctx)
 	// if err != nil {
 	// 	asbp.ConnectionStatus = cloud.FailedConnection
@@ -59,20 +56,18 @@ func (asbp *AzureStorageBillingParser) ParseBillingData(start, end time.Time, re
 	// 	return nil
 	// }
 
+	// ----- HARDCODED BILLING DATA -----
 	// log.Infof("blobNames: %v", blobNames)  // [export/thomasnExport/20240101-20240131/thomasnExport_758a42af-0731-4edb-b498-1e523bb40f12.csv]
-
 	blobNames := []string{"thomasn-scale-test.csv"}
 	// ----- HARDCODED BILLING DATA -----
 
 	for _, blobName := range blobNames {
-		// ----- INSTRUMENTATION -----
-		var m runtime.MemStats
-		runtime.ReadMemStats(&m)
-		log.Infof("ParseBillingData: HeapAlloc:  %v MB", m.HeapAlloc/1024/1024)
-		// ----- INSTRUMENTATION -----
-
 		if env.IsAzureParseBillingPaginated() {
-			localFilePath := filepath.Join(env.GetConfigPathWithDefault(env.DefaultConfigMountPath), "db", "cloudCost", "azurebilling.csv")
+			localPath := filepath.Join(env.GetConfigPathWithDefault(env.DefaultConfigMountPath), "db", "cloudCost")
+			localFilePath := filepath.Join(localPath, filepath.Base(blobName))
+			if err := asbp.cleanFilesOlderThan7d(localPath); err != nil {
+				log.Warnf("CloudCost: Azure: ParseBillingData: failed to remove the following stale files: %v", err)
+			}
 			err := asbp.DownloadBlobToFile(localFilePath, blobName, client, ctx)
 			if err != nil {
 				asbp.ConnectionStatus = cloud.FailedConnection
@@ -107,12 +102,6 @@ func (asbp *AzureStorageBillingParser) ParseBillingData(start, end time.Time, re
 }
 
 func (asbp *AzureStorageBillingParser) parseCSV(start, end time.Time, reader *csv.Reader, resultFn AzureBillingResultFunc) error {
-	// ----- INSTRUMENTATION -----
-	var m runtime.MemStats
-	runtime.ReadMemStats(&m)
-	log.Infof("parseCSV: HeapAlloc:  %v MB", m.HeapAlloc/1024/1024)
-	// ----- INSTRUMENTATION -----
-
 	headers, err := reader.Read()
 	if err != nil {
 		return err
@@ -140,11 +129,6 @@ func (asbp *AzureStorageBillingParser) parseCSV(start, end time.Time, reader *cs
 			return err
 		}
 	}
-
-	// ----- INSTRUMENTATION -----
-	runtime.ReadMemStats(&m)
-	log.Infof("parseCSV: HeapAlloc:  %v MB", m.HeapAlloc/1024/1024)
-	// ----- INSTRUMENTATION -----
 
 	return nil
 }
@@ -229,4 +213,31 @@ func (asbp *AzureStorageBillingParser) timeToMonthString(input time.Time) string
 	startOfMonth := input.AddDate(0, 0, -input.Day()+1)
 	endOfMonth := input.AddDate(0, 1, -input.Day())
 	return startOfMonth.Format(format) + "-" + endOfMonth.Format(format)
+}
+
+func (asbp *AzureStorageBillingParser) cleanFilesOlderThan7d(localPath string) error {
+	duration := 7 * 24 * time.Hour
+	now := time.Now()
+	errs := []string{}
+
+	filepath.Walk(localPath, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			errs = append(errs, err.Error())
+			return err
+		}
+
+		if diff := now.Sub(info.ModTime()); diff > duration {
+			err := os.Remove(path)
+			if err != nil {
+				errs = append(errs, err.Error())
+			}
+		}
+		return nil
+	})
+
+	if len(errs) == 0 {
+		return nil
+	} else {
+		return fmt.Errorf("cleanFilesOlderThan7d: %v", errs)
+	}
 }

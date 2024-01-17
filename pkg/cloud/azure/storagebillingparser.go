@@ -46,23 +46,24 @@ func (asbp *AzureStorageBillingParser) ParseBillingData(start, end time.Time, re
 		return err
 	}
 	ctx := context.Background()
-	// blobNames, err := asbp.getMostRecentBlobs(start, end, client, ctx)
-	// if err != nil {
-	// 	asbp.ConnectionStatus = cloud.FailedConnection
-	// 	return err
-	// }
-	// if len(blobNames) == 0 && asbp.ConnectionStatus != cloud.SuccessfulConnection {
-	// 	asbp.ConnectionStatus = cloud.MissingData
-	// 	return nil
-	// }
+
+	// Example blobNames: [ export/myExport/20240101-20240131/myExport_758a42af-0731-4edb-b498-1e523bb40f12.csv ]
+	blobNames, err := asbp.getMostRecentBlobs(start, end, client, ctx)
+	if err != nil {
+		asbp.ConnectionStatus = cloud.FailedConnection
+		return err
+	}
+	if len(blobNames) == 0 && asbp.ConnectionStatus != cloud.SuccessfulConnection {
+		asbp.ConnectionStatus = cloud.MissingData
+		return nil
+	}
 
 	// ----- HARDCODED BILLING DATA -----
-	// log.Infof("blobNames: %v", blobNames)  // [export/thomasnExport/20240101-20240131/thomasnExport_758a42af-0731-4edb-b498-1e523bb40f12.csv]
-	blobNames := []string{"thomasn-scale-test.csv"}
+	// blobNames := []string{"thomasn-scale-test.csv"}
 	// ----- HARDCODED BILLING DATA -----
 
 	for _, blobName := range blobNames {
-		if env.IsAzureParseBillingPaginated() {
+		if env.IsAzureDownloadBillingDataToDisk() {
 			localPath := filepath.Join(env.GetConfigPathWithDefault(env.DefaultConfigMountPath), "db", "cloudCost")
 			localFilePath := filepath.Join(localPath, filepath.Base(blobName))
 			if err := asbp.cleanFilesOlderThan7d(localPath); err != nil {
@@ -217,7 +218,6 @@ func (asbp *AzureStorageBillingParser) timeToMonthString(input time.Time) string
 
 func (asbp *AzureStorageBillingParser) cleanFilesOlderThan7d(localPath string) error {
 	duration := 7 * 24 * time.Hour
-	now := time.Now()
 	errs := []string{}
 
 	filepath.Walk(localPath, func(path string, info os.FileInfo, err error) error {
@@ -226,7 +226,7 @@ func (asbp *AzureStorageBillingParser) cleanFilesOlderThan7d(localPath string) e
 			return err
 		}
 
-		if diff := now.Sub(info.ModTime()); diff > duration {
+		if time.Since(info.ModTime()) > duration {
 			err := os.Remove(path)
 			if err != nil {
 				errs = append(errs, err.Error())

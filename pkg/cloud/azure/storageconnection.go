@@ -71,25 +71,9 @@ func (sc *StorageConnection) DownloadBlob(blobName string, client *azblob.Client
 
 // DownloadBlobToFile downloads the Azure Billing CSV to a local file
 func (sc *StorageConnection) DownloadBlobToFile(localFilePath string, blobName string, client *azblob.Client, ctx context.Context) error {
-	// Remove existing Azure Billing CSV on disk, if it's older than 24h
-	// if fileInfo, err := os.Stat(localFilePath); err == nil {
-	// 	modTime := fileInfo.ModTime()
-	// 	// TODO: Ideally, delete this file when we know a new Azure Billing CSV is available for download. Not because the local file is beyond an arbitrary age.
-	// 	if time.Since(modTime) > 24*time.Hour {
-	// 		err := os.Remove(localFilePath)
-	// 		log.Infof("Azure: DownloadBlobToFile: removing existing file %v", localFilePath)
-	// 		if err != nil {
-	// 			return fmt.Errorf("Azure: DownloadBlobToFile: failed to delete existing file %w", err)
-	// 		}
-	// 	} else {
-	// 		log.Infof("Azure: DownloadBlobToFile: file %v exists and is less than 24h old, not deleting", localFilePath)
-	// 		return nil
-	// 	}
-	// }
-
 	// If file exists, don't download it again
 	if _, err := os.Stat(localFilePath); err == nil {
-		log.Infof("CloudCost: Azure: DownloadBlobToFile: file %v already exists, not downloading %v", localFilePath, blobName)
+		log.DedupedInfof(3, "CloudCost: Azure: DownloadBlobToFile: file %v already exists, not downloading %v", localFilePath, blobName)
 		return nil
 	}
 
@@ -105,7 +89,7 @@ func (sc *StorageConnection) DownloadBlobToFile(localFilePath string, blobName s
 	defer fp.Close()
 
 	// Download newest Azure Billing CSV to disk
-	log.Infof("Azure: DownloadBlobToFile: retrieving blob: %v", blobName)
+	log.Infof("CloudCost: Azure: DownloadBlobToFile: retrieving blob: %v", blobName)
 	filesize, err := client.DownloadFile(ctx, sc.Container, blobName, fp, nil)
 	if err != nil {
 		return fmt.Errorf("CloudCost: Azure: DownloadBlobToFile: failed to download %w", err)

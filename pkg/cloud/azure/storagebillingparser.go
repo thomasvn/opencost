@@ -66,7 +66,7 @@ func (asbp *AzureStorageBillingParser) ParseBillingData(start, end time.Time, re
 		if env.IsAzureDownloadBillingDataToDisk() {
 			localPath := filepath.Join(env.GetConfigPathWithDefault(env.DefaultConfigMountPath), "db", "cloudCost")
 			localFilePath := filepath.Join(localPath, filepath.Base(blobName))
-			if err := asbp.cleanFilesOlderThan7d(localPath); err != nil {
+			if _, err := asbp.deleteFilesOlderThan7d(localPath); err != nil {
 				log.Warnf("CloudCost: Azure: ParseBillingData: failed to remove the following stale files: %v", err)
 			}
 			err := asbp.DownloadBlobToFile(localFilePath, blobName, client, ctx)
@@ -216,8 +216,9 @@ func (asbp *AzureStorageBillingParser) timeToMonthString(input time.Time) string
 	return startOfMonth.Format(format) + "-" + endOfMonth.Format(format)
 }
 
-func (asbp *AzureStorageBillingParser) cleanFilesOlderThan7d(localPath string) error {
+func (asbp *AzureStorageBillingParser) deleteFilesOlderThan7d(localPath string) ([]string, error) {
 	duration := 7 * 24 * time.Hour
+	cleaned := []string{}
 	errs := []string{}
 
 	filepath.Walk(localPath, func(path string, info os.FileInfo, err error) error {
@@ -231,13 +232,14 @@ func (asbp *AzureStorageBillingParser) cleanFilesOlderThan7d(localPath string) e
 			if err != nil {
 				errs = append(errs, err.Error())
 			}
+			cleaned = append(cleaned, path)
 		}
 		return nil
 	})
 
 	if len(errs) == 0 {
-		return nil
+		return cleaned, nil
 	} else {
-		return fmt.Errorf("cleanFilesOlderThan7d: %v", errs)
+		return cleaned, fmt.Errorf("deleteFilesOlderThan7d: %v", errs)
 	}
 }

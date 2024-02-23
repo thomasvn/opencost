@@ -1,9 +1,11 @@
 package azure
 
 import (
+	"fmt"
 	"strings"
 	"time"
 
+	"github.com/opencost/opencost/core/pkg/log"
 	"github.com/opencost/opencost/core/pkg/opencost"
 	"github.com/opencost/opencost/core/pkg/util/timeutil"
 )
@@ -18,6 +20,8 @@ func (asi *AzureStorageIntegration) GetCloudCost(start, end time.Time) (*opencos
 		return nil, err
 	}
 
+	log.Infof("DEBUG: GetCloudCost()")
+
 	err = asi.ParseBillingData(start, end, func(abv *BillingRowValues) error {
 		s := abv.Date
 		e := abv.Date.Add(timeutil.Day)
@@ -29,6 +33,7 @@ func (asi *AzureStorageIntegration) GetCloudCost(start, end time.Time) (*opencos
 		}
 
 		providerID, _ := AzureSetProviderID(abv)
+		fmt.Printf("DEBUG: ParseBillingDataFn: ProviderID %s\n", providerID)
 		// Create CloudCost
 		// Using the NetCost as a 'placeholder' for Invoiced and Amortized Net costs now,
 		// until we can revisit and spend the time to do the calculations correctly
@@ -74,6 +79,10 @@ func (asi *AzureStorageIntegration) GetCloudCost(start, end time.Time) (*opencos
 	if err != nil {
 		return nil, err
 	}
+
+	// log.Infof("DEBUG: CloudCostSetRange: Window: %v", ccsr.Window)
+	// log.Infof("DEBUG: CloudCostSetRange: CloudCostSets: %v", ccsr.CloudCostSets)
+
 	return ccsr, nil
 }
 

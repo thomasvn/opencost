@@ -47,17 +47,20 @@ func (asbp *AzureStorageBillingParser) ParseBillingData(start, end time.Time, re
 		return err
 	}
 	ctx := context.Background()
-	// Example blobNames: [ export/myExport/20240101-20240131/myExport_758a42af-0731-4edb-b498-1e523bb40f12.csv ]
-	blobNames, err := asbp.getMostRecentBlobs(start, end, client, ctx)
-	if err != nil {
-		asbp.ConnectionStatus = cloud.FailedConnection
-		return err
-	}
+	// // Example blobNames: [ export/myExport/20240101-20240131/myExport_758a42af-0731-4edb-b498-1e523bb40f12.csv ]
+	// blobNames, err := asbp.getMostRecentBlobs(start, end, client, ctx)
+	// if err != nil {
+	// 	asbp.ConnectionStatus = cloud.FailedConnection
+	// 	return err
+	// }
 
-	if len(blobNames) == 0 && asbp.ConnectionStatus != cloud.SuccessfulConnection {
-		asbp.ConnectionStatus = cloud.MissingData
-		return nil
-	}
+	// if len(blobNames) == 0 && asbp.ConnectionStatus != cloud.SuccessfulConnection {
+	// 	asbp.ConnectionStatus = cloud.MissingData
+	// 	return nil
+	// }
+
+	// THOMASN: For testing purposes. Remove later.
+	blobNames := []string{"kubecost_export_20240101.csv"}
 
 	for _, blobName := range blobNames {
 		if env.IsAzureDownloadBillingDataToDisk() {
@@ -85,6 +88,9 @@ func (asbp *AzureStorageBillingParser) ParseBillingData(start, end time.Time, re
 				asbp.ConnectionStatus = cloud.ParseError
 				return err
 			}
+
+			log.Infof("DEBUG: parsed csv")
+
 		} else {
 			blobBytes, err2 := asbp.DownloadBlob(blobName, client, ctx)
 			if err2 != nil {
@@ -98,6 +104,9 @@ func (asbp *AzureStorageBillingParser) ParseBillingData(start, end time.Time, re
 			}
 		}
 	}
+
+	log.Infof("DEBUG: ParseBillingData: successful")
+
 	asbp.ConnectionStatus = cloud.SuccessfulConnection
 	return nil
 }
@@ -108,6 +117,9 @@ func (asbp *AzureStorageBillingParser) parseCSV(start, end time.Time, reader *cs
 		return err
 	}
 	abp, err := NewBillingParseSchema(headers)
+
+	log.Infof("DEBUG: parseCSV: headers: %v", headers)
+
 	if err != nil {
 		return err
 	}

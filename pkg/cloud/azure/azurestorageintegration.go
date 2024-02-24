@@ -33,7 +33,6 @@ func (asi *AzureStorageIntegration) GetCloudCost(start, end time.Time) (*opencos
 		}
 
 		providerID, _ := AzureSetProviderID(abv)
-		fmt.Printf("DEBUG: ParseBillingDataFn: ProviderID %s\n", providerID)
 		// Create CloudCost
 		// Using the NetCost as a 'placeholder' for Invoiced and Amortized Net costs now,
 		// until we can revisit and spend the time to do the calculations correctly
@@ -72,6 +71,13 @@ func (asi *AzureStorageIntegration) GetCloudCost(start, end time.Time) (*opencos
 			},
 		}
 
+		if abv.MeterCategory == "Virtual Machines" {
+			fmt.Printf("DEBUG: ParseBillingDataFn: Date: %s, OpenCostWindow: %v\n", abv.Date, window)
+			fmt.Printf("DEBUG: ParseBillingDataFn: ProviderID: %s\n", cc.Properties.ProviderID)
+			fmt.Printf("DEBUG: ParseBillingDataFn: Service: %s\n", cc.Properties.Service)
+			fmt.Printf("DEBUG: ParseBillingDataFn: MeterCategory: %s, OpenCostCategory %s\n", abv.MeterCategory, cc.Properties.Category)
+			fmt.Printf("DEBUG: ParseBillingDataFn: NetCost: %f, ListCost: %f\n\n", cc.NetCost.Cost, cc.ListCost.Cost)
+		}
 		ccsr.LoadCloudCost(cc)
 
 		return nil
@@ -79,9 +85,6 @@ func (asi *AzureStorageIntegration) GetCloudCost(start, end time.Time) (*opencos
 	if err != nil {
 		return nil, err
 	}
-
-	// log.Infof("DEBUG: CloudCostSetRange: Window: %v", ccsr.Window)
-	// log.Infof("DEBUG: CloudCostSetRange: CloudCostSets: %v", ccsr.CloudCostSets)
 
 	return ccsr, nil
 }

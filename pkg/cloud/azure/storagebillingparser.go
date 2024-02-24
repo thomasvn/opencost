@@ -41,10 +41,14 @@ func (asbp *AzureStorageBillingParser) ParseBillingData(start, end time.Time, re
 		return cloud.FailedConnection, err
 	}
 	ctx := context.Background()
-	blobNames, err := asbp.getMostRecentBlobs(start, end, containerURL, ctx)
-	if err != nil {
-		return cloud.FailedConnection, err
-	}
+	// blobNames, err := asbp.getMostRecentBlobs(start, end, containerURL, ctx)
+	// if err != nil {
+	// 	return cloud.FailedConnection, err
+	// }
+
+	fmt.Printf("DEBUG: ParseBillingData()\n")
+	blobNames := []string{"kubecost_export_20240101.csv"}
+
 	for _, blobName := range blobNames {
 		blobBytes, err2 := asbp.DownloadBlob(blobName, containerURL, ctx)
 		if err2 != nil {

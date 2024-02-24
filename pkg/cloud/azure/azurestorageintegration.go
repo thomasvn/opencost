@@ -1,6 +1,7 @@
 package azure
 
 import (
+	"fmt"
 	"strings"
 	"time"
 
@@ -19,6 +20,8 @@ func (asi *AzureStorageIntegration) GetCloudCost(start, end time.Time) (*kubecos
 	if err != nil {
 		return nil, err
 	}
+
+	fmt.Printf("DEBUG: GetCloudCost()")
 
 	status, err := asi.ParseBillingData(start, end, func(abv *BillingRowValues) error {
 		s := abv.Date
@@ -67,6 +70,14 @@ func (asi *AzureStorageIntegration) GetCloudCost(start, end time.Time) (*kubecos
 				Cost:              abv.NetCost,
 				KubernetesPercent: k8sPtc,
 			},
+		}
+
+		if abv.MeterCategory == "Virtual Machines" {
+			fmt.Printf("DEBUG: ParseBillingDataFn: Date: %s, OpenCostWindow: %v\n", abv.Date, window)
+			fmt.Printf("DEBUG: ParseBillingDataFn: ProviderID: %s\n", cc.Properties.ProviderID)
+			fmt.Printf("DEBUG: ParseBillingDataFn: Service: %s\n", cc.Properties.Service)
+			fmt.Printf("DEBUG: ParseBillingDataFn: MeterCategory: %s, OpenCostCategory %s\n", abv.MeterCategory, cc.Properties.Category)
+			fmt.Printf("DEBUG: ParseBillingDataFn: NetCost: %f, ListCost: %f\n\n", cc.NetCost.Cost, cc.ListCost.Cost)
 		}
 
 		// Check if Item

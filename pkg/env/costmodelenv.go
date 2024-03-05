@@ -578,11 +578,11 @@ func GetPromClusterLabel() string {
 }
 
 func GetPromNodeLabel() string {
-	return Get(PromNodeLabelEnvVar, "node")
+	return env.Get(PromNodeLabelEnvVar, "node")
 }
 
 func GetPromNamespaceLabel() string {
-	return Get(PromNamespaceLabelEnvVar, "namespace")
+	return env.Get(PromNamespaceLabelEnvVar, "namespace")
 }
 
 func GetDefaultPromNamespaceLabel() string {

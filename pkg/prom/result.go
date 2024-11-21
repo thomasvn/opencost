@@ -139,19 +139,22 @@ func NewQueryResults(query string, queryResult interface{}) *QueryResults {
 	for _, val := range resultsData {
 		resultInterface, ok := val.(map[string]interface{})
 		if !ok {
-			qrs.Error = ResultFormatErr(query, val)
-			return qrs
+			err := ResultFormatErr(query, val)
+			log.Debugf("PromResultParse: skipping this query result: %s", err.Error())
+			continue
 		}
 
 		metricInterface, ok := resultInterface["metric"]
 		if !ok {
-			qrs.Error = MetricFieldDoesNotExistErr(query, resultInterface)
-			return qrs
+			err := MetricFieldDoesNotExistErr(query, resultInterface)
+			log.Debugf("PromResultParse: skipping this query result: %s", err.Error())
+			continue
 		}
 		metricMap, ok := metricInterface.(map[string]interface{})
 		if !ok {
-			qrs.Error = MetricFieldFormatErr(query, metricInterface)
-			return qrs
+			err := MetricFieldFormatErr(query, metricInterface)
+			log.Debugf("PromResultParse: skipping this query result: %s", err.Error())
+			continue
 		}
 
 		// Define label string for values to ensure that we only run labelsForMetric once
@@ -165,15 +168,16 @@ func NewQueryResults(query string, queryResult interface{}) *QueryResults {
 		if !isRange {
 			dataPoint, ok := resultInterface["value"]
 			if !ok {
-				qrs.Error = ValueFieldDoesNotExistErr(query, resultInterface)
-				return qrs
+				err := ValueFieldDoesNotExistErr(query, resultInterface)
+				log.Debugf("PromResultParse: skipping this query result: %s", err.Error())
+				continue
 			}
 
 			// Append new data point, log warnings
 			v, warn, err := parseDataPoint(query, dataPoint)
 			if err != nil {
-				qrs.Error = err
-				return qrs
+				log.Debugf("PromResultParse: skipping this query result: %s", err.Error())
+				continue
 			}
 			if warn != nil {
 				log.DedupedWarningf(5, "%s\nQuery: %s\nLabels: %s", warn.Message(), query, labelsForMetric(metricMap))
@@ -183,16 +187,17 @@ func NewQueryResults(query string, queryResult interface{}) *QueryResults {
 		} else {
 			values, ok := resultInterface["values"].([]interface{})
 			if !ok {
-				qrs.Error = fmt.Errorf("Values field is improperly formatted")
-				return qrs
+				err := ValueFieldDoesNotExistErr(query, resultInterface)
+				log.Debugf("PromResultParse: skipping this query result: %s", err.Error())
+				continue
 			}
 
 			// Append new data points, log warnings
 			for _, value := range values {
 				v, warn, err := parseDataPoint(query, value)
 				if err != nil {
-					qrs.Error = err
-					return qrs
+					log.Debugf("PromResultParse: skipping this query result: %s", err.Error())
+					continue
 				}
 				if warn != nil {
 					if labelString == "" {

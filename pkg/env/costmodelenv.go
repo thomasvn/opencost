@@ -71,7 +71,7 @@ const (
 	MultiClusterBasicAuthPassword = "MC_BASIC_AUTH_PW"
 	MultiClusterBearerToken       = "MC_BEARER_TOKEN"
 
-	InsecureSkipVerify = "INSECURE_SKIP_VERIFY"
+	InsecureSkipVerify   = "INSECURE_SKIP_VERIFY"
 	KubeRbacProxyEnabled = "KUBE_RBAC_PROXY_ENABLED"
 
 	KubeConfigPathEnvVar = "KUBECONFIG_PATH"
@@ -86,6 +86,8 @@ const (
 	LegacyExternalAPIDisabledVar         = "LEGACY_EXTERNAL_API_DISABLED"
 
 	PromClusterIDLabelEnvVar = "PROM_CLUSTER_ID_LABEL"
+	PromNodeLabelEnvVar      = "PROM_NODE_LABEL"
+	PromNamespaceLabelEnvVar = "PROM_NAMESPACE_LABEL"
 
 	PricingConfigmapName  = "PRICING_CONFIGMAP_NAME"
 	MetricsConfigmapName  = "METRICS_CONFIGMAP_NAME"
@@ -610,6 +612,18 @@ func LegacyExternalCostsAPIDisabled() bool {
 // GetPromClusterLabel returns the environment variable value for PromClusterIDLabel
 func GetPromClusterLabel() string {
 	return env.Get(PromClusterIDLabelEnvVar, "cluster_id")
+}
+
+func GetPromNodeLabel() string {
+	return env.Get(PromNodeLabelEnvVar, "node")
+}
+
+func GetPromNamespaceLabel() string {
+	return env.Get(PromNamespaceLabelEnvVar, "namespace")
+}
+
+func GetDefaultPromNamespaceLabel() string {
+	return "namespace"
 }
 
 // IsIngestingPodUID returns the env variable from ingestPodUID, which alters the

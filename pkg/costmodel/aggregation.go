@@ -327,6 +327,27 @@ func (a *Accesses) ComputeAllocationHandlerSummary(w http.ResponseWriter, r *htt
 }
 
 // ComputeAllocationHandler computes an AllocationSetRange from the CostModel.
+//
+// @Summary      Query costs allocated to Kubernetes workloads
+// @Description  Returns costs and resources allocated to workloads. Data is an array of sets (one per step).
+// @Tags         allocation
+// @Produce      json
+// @Param        window                            query  string  true   "Time window. Accepts: today, lastweek, 30m, 7d, RFC3339 date pairs, Unix timestamps."
+// @Param        aggregate                         query  string  false  "Field to aggregate by. e.g. namespace, controller, label:app"
+// @Param        step                              query  string  false  "Duration per allocation set. Defaults to window."
+// @Param        accumulate                        query  bool    false  "If true, sum entire window into one result set."
+// @Param        accumulateBy                      query  string  false  "Accumulation option: all, day, week, month, quarter, none"
+// @Param        includeIdle                       query  bool    false  "Include idle allocation using Asset data."
+// @Param        idleByNode                        query  bool    false  "Compute idle at node level instead of cluster level."
+// @Param        shareIdle                         query  bool    false  "Distribute idle costs proportionally across workloads."
+// @Param        filter                            query  string  false  "Filter expression."
+// @Param        includeProportionalAssetResourceCosts  query  bool  false  "Include proportional asset resource costs."
+// @Param        includeAggregatedMetadata         query  bool    false  "Include aggregated labels and annotations in results."
+// @Param        sharelb                           query  bool    false  "Share load balancer costs across workloads."
+// @Success      200  {object}  protocol.HTTPResponse  "Allocation data wrapped in standard response envelope"
+// @Failure      400  {string}  string                 "Invalid query parameter"
+// @Failure      500  {string}  string                 "Internal server error"
+// @Router       /allocation [get]
 func (a *Accesses) ComputeAllocationHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	w.Header().Set("Content-Type", "application/json")
 

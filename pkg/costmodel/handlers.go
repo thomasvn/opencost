@@ -14,7 +14,18 @@ import (
 	"github.com/opencost/opencost/pkg/env"
 )
 
-// ComputeAllocationHandler returns the assets from the CostModel.
+// ComputeAssetsHandler returns the assets from the CostModel.
+//
+// @Summary      Query underlying infrastructure assets
+// @Description  Returns costs of Nodes, Disks, and Load Balancers.
+// @Tags         assets
+// @Produce      json
+// @Param        window  query  string  true   "Time window. Accepts: today, lastweek, 30m, 7d, RFC3339 date pairs, Unix timestamps."
+// @Param        filter  query  string  false  "Filter expression."
+// @Success      200  {object}  protocol.HTTPResponse  "Asset data wrapped in standard response envelope"
+// @Failure      400  {string}  string                 "Invalid query parameter"
+// @Failure      500  {string}  string                 "Internal server error"
+// @Router       /assets [get]
 func (a *Accesses) ComputeAssetsHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	w.Header().Set("Content-Type", "application/json")
 

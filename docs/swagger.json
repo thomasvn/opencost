@@ -1,319 +1,244 @@
 {
-  "openapi": "3.0.1",
-  "info": {
-    "title": "OpenCost API",
-    "description": "The OpenCost API provides real-time and historical reporting of Kubernetes cloud costs.",
-    "license": {
-      "name": "Apache 2.0",
-      "url": "https://www.apache.org/licenses/LICENSE-2.0.html"
+    "swagger": "2.0",
+    "info": {
+        "description": "The OpenCost API provides real-time and historical reporting of Kubernetes cloud costs.",
+        "title": "OpenCost API",
+        "contact": {},
+        "license": {
+            "name": "Apache 2.0",
+            "url": "https://www.apache.org/licenses/LICENSE-2.0.html"
+        },
+        "version": "1.0.0"
     },
-    "version": "1.0.0"
-  },
-  "servers": [
-    {
-      "url": "http://localhost:9003",
-      "description": "kubectl port-forward --namespace opencost service/opencost 9003"
-    }
-  ],
-  "paths": {
-    "/allocation": {
-      "get": {
-        "summary": "query for costs and resources allocated to Kubernetes workloads",
-        "description": "The standard OpenCost API query for costs and resources allocated to Kubernetes workloads.  Note that 'data' is an array of sets (one per 'step').\n",
-        "parameters": [
-          {
-            "name": "window",
-            "in": "query",
-            "required": true,
-            "description": "Duration of time over which to query. Accepts: words like `today`, `lastweek`; durations like `30m`, `7d`; RFC3339 date pairs; or Unix timestamps.",
-            "schema": {
-              "type": "string"
-            },
-            "examples": {
-              "today": {
-                "value": "today"
-              },
-              "lastweek": {
-                "value": "lastweek"
-              },
-              "range": {
-                "value": "2024-01-01T00:00:00Z,2024-01-02T00:00:00Z"
-              }
-            }
-          },
-          {
-            "name": "aggregate",
-            "in": "query",
-            "description": "Field by which to aggregate. e.g., `namespace`, `controller`, `label:app`.",
-            "schema": {
-              "type": "string"
-            },
-            "example": "namespace"
-          },
-          {
-            "name": "step",
-            "in": "query",
-            "description": "Duration of a single allocation set. Default is `window`.",
-            "schema": {
-              "type": "string"
-            },
-            "example": "1d"
-          },
-          {
-            "name": "accumulate",
-            "in": "query",
-            "description": "If true, sums the entire window into a single result set.",
-            "schema": {
-              "type": "boolean"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Success",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AllocationResponse"
+    "host": "localhost:9003",
+    "paths": {
+        "/allocation": {
+            "get": {
+                "description": "Returns costs and resources allocated to workloads. Data is an array of sets (one per step).",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "allocation"
+                ],
+                "summary": "Query costs allocated to Kubernetes workloads",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Time window. Accepts: today, lastweek, 30m, 7d, RFC3339 date pairs, Unix timestamps.",
+                        "name": "window",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Field to aggregate by. e.g. namespace, controller, label:app",
+                        "name": "aggregate",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Duration per allocation set. Defaults to window.",
+                        "name": "step",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "If true, sum entire window into one result set.",
+                        "name": "accumulate",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Accumulation option: all, day, week, month, quarter, none",
+                        "name": "accumulateBy",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Include idle allocation using Asset data.",
+                        "name": "includeIdle",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Compute idle at node level instead of cluster level.",
+                        "name": "idleByNode",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Distribute idle costs proportionally across workloads.",
+                        "name": "shareIdle",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter expression.",
+                        "name": "filter",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Include proportional asset resource costs.",
+                        "name": "includeProportionalAssetResourceCosts",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Include aggregated labels and annotations in results.",
+                        "name": "includeAggregatedMetadata",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Share load balancer costs across workloads.",
+                        "name": "sharelb",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Allocation data wrapped in standard response envelope",
+                        "schema": {
+                            "$ref": "#/definitions/protocol.HTTPResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid query parameter",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
                 }
-              }
             }
-          }
+        },
+        "/assets": {
+            "get": {
+                "description": "Returns costs of Nodes, Disks, and Load Balancers.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "assets"
+                ],
+                "summary": "Query underlying infrastructure assets",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Time window. Accepts: today, lastweek, 30m, 7d, RFC3339 date pairs, Unix timestamps.",
+                        "name": "window",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter expression.",
+                        "name": "filter",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Asset data wrapped in standard response envelope",
+                        "schema": {
+                            "$ref": "#/definitions/protocol.HTTPResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid query parameter",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/cloudCost": {
+            "get": {
+                "description": "Retrieves non-Kubernetes cloud provider costs via cloud integration.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "cloudcost"
+                ],
+                "summary": "Query cloud provider billing data",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Time window. Accepts: today, lastweek, 30m, 7d, RFC3339 date pairs, Unix timestamps.",
+                        "name": "window",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Field to aggregate by.",
+                        "name": "aggregate",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter expression.",
+                        "name": "filter",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Cloud cost data wrapped in standard response envelope",
+                        "schema": {
+                            "$ref": "#/definitions/protocol.HTTPResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid query parameter",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "501": {
+                        "description": "Cloud cost integration not configured",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
         }
-      }
     },
-    "/assets": {
-      "get": {
-        "summary": "query for underlying infrastructure assets",
-        "description": "Returns the costs of Nodes, Disks, and Load Balancers.",
-        "parameters": [
-          {
-            "name": "window",
-            "in": "query",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Success",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AssetsResponse"
+    "definitions": {
+        "protocol.HTTPResponse": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "integer"
+                },
+                "data": {},
+                "message": {
+                    "type": "string"
+                },
+                "meta": {
+                    "type": "object",
+                    "additionalProperties": true
+                },
+                "warning": {
+                    "type": "string"
                 }
-              }
             }
-          }
         }
-      }
-    },
-    "/cloudCost": {
-      "get": {
-        "summary": "query for cloud provider billing data",
-        "description": "Retrieves non-K8s cloud provider costs via cloud integration.",
-        "parameters": [
-          {
-            "name": "window",
-            "in": "query",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Success",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CloudCostResponse"
-                }
-              }
-            }
-          }
-        }
-      }
     }
-  },
-  "components": {
-    "schemas": {
-      "AllocationResponse": {
-        "type": "object",
-        "properties": {
-          "code": {
-            "type": "integer"
-          },
-          "status": {
-            "type": "string"
-          },
-          "data": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "additionalProperties": {
-                "$ref": "#/components/schemas/Allocation"
-              }
-            }
-          }
-        }
-      },
-      "Allocation": {
-        "type": "object",
-        "properties": {
-          "name": {
-            "type": "string"
-          },
-          "cpuCost": {
-            "type": "number"
-          },
-          "cpuCoreUsageAverage": {
-            "type": "number"
-          },
-          "ramCost": {
-            "type": "number"
-          },
-          "ramByteUsageAverage": {
-            "type": "number"
-          },
-          "pvCost": {
-            "type": "number"
-          },
-          "networkCost": {
-            "type": "number"
-          },
-          "sharedCost": {
-            "type": "number"
-          },
-          "externalCost": {
-            "type": "number"
-          },
-          "totalCost": {
-            "type": "number"
-          },
-          "minutes": {
-            "type": "number"
-          },
-          "window": {
-            "type": "object",
-            "properties": {
-              "start": {
-                "type": "string",
-                "format": "date-time"
-              },
-              "end": {
-                "type": "string",
-                "format": "date-time"
-              }
-            }
-          },
-          "properties": {
-            "type": "object",
-            "additionalProperties": {
-              "type": "string"
-            }
-          }
-        }
-      },
-      "AssetsResponse": {
-        "type": "object",
-        "properties": {
-          "code": {
-            "type": "integer"
-          },
-          "status": {
-            "type": "string"
-          },
-          "data": {
-            "type": "object",
-            "additionalProperties": {
-              "$ref": "#/components/schemas/Asset"
-            }
-          }
-        }
-      },
-      "Asset": {
-        "type": "object",
-        "properties": {
-          "type": {
-            "type": "string"
-          },
-          "totalCost": {
-            "type": "number"
-          },
-          "cpuCost": {
-            "type": "number"
-          },
-          "ramCost": {
-            "type": "number"
-          },
-          "providerID": {
-            "type": "string"
-          },
-          "window": {
-            "type": "object",
-            "properties": {
-              "start": {
-                "type": "string",
-                "format": "date-time"
-              },
-              "end": {
-                "type": "string",
-                "format": "date-time"
-              }
-            }
-          }
-        }
-      },
-      "CloudCostResponse": {
-        "type": "object",
-        "properties": {
-          "code": {
-            "type": "integer"
-          },
-          "status": {
-            "type": "string"
-          },
-          "data": {
-            "type": "object",
-            "properties": {
-              "sets": {
-                "type": "array",
-                "items": {
-                  "$ref": "#/components/schemas/CloudCostSet"
-                }
-              }
-            }
-          }
-        }
-      },
-      "CloudCostSet": {
-        "type": "object",
-        "properties": {
-          "cloudCosts": {
-            "type": "object",
-            "additionalProperties": {
-              "$ref": "#/components/schemas/CloudCostItem"
-            }
-          }
-        }
-      },
-      "CloudCostItem": {
-        "type": "object",
-        "properties": {
-          "netCost": {
-            "type": "object",
-            "properties": {
-              "cost": {
-                "type": "number"
-              }
-            }
-          }
-        }
-      }
-    }
-  }
 }

@@ -10,6 +10,15 @@ default:
 fmt:
     go fmt ./...
 
+# regenerate docs/swagger.json from handler annotations
+swagger-gen:
+    swag init -g cmd/costmodel/main.go -o docs --outputTypes json
+
+# verify docs/swagger.json is up to date with handler annotations
+swagger-check:
+    swag init -g cmd/costmodel/main.go -o docs --outputTypes json
+    git diff --exit-code docs/swagger.json
+
 # check if code is formatted
 fmt-check:
     #!/bin/sh

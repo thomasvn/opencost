@@ -1,3 +1,10 @@
+// @title           OpenCost API
+// @version         1.0.0
+// @description     The OpenCost API provides real-time and historical reporting of Kubernetes cloud costs.
+// @license.name    Apache 2.0
+// @license.url     https://www.apache.org/licenses/LICENSE-2.0.html
+// @host            localhost:9003
+
 package main
 
 import (

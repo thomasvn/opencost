@@ -212,7 +212,7 @@ func (p *AWSPricingSource) GetPricing() (*pricing.PricingSet, error) {
 				},
 				Prices: pricing.Prices{
 					pricing.ResourceStorage: pricing.Price{
-						Unit:  unit.Hour,
+						Unit:  unit.GiBHour,
 						Price: hourlyPrice,
 					},
 				},
